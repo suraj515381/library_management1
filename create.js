@@ -1,27 +1,25 @@
-import { getToken } from '@auth/core/jwt';
-import { getContext } from 'hono/context-storage';
-
-export default function CreateAuth() {
-	const auth = async () => {
-		const c = getContext();
-		const token = await getToken({
-			req: c.req.raw,
-			secret: process.env.AUTH_SECRET,
-			secureCookie: process.env.AUTH_URL.startsWith('https'),
-		});
-		if (token) {
+const create = {
+	db: (database) => ({
+		from: (table) => {
 			return {
-				user: {
-					id: token.sub,
-					email: token.email,
-					name: token.name,
-					image: token.picture,
+				getById: async (id) => {
+					const response = await fetch(`/api/db/${database}`, {
+						method: 'POST',
+						headers: { 'Content-Type': 'application/json' },
+						body: JSON.stringify({
+							query: `SELECT * FROM \`${table}\` WHERE \`id\` = ? LIMIT 1`,
+							values: [id],
+						}),
+					});
+					const data = await response.json();
+					if (data.length > 0) {
+						return data[0];
+					}
+					return null;
 				},
-				expires: token.exp.toString(),
 			};
-		}
-	};
-	return {
-		auth,
-	};
-}
+		},
+	}),
+};
+
+export default create;
